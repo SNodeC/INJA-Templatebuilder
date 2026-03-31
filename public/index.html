@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>INJA Templatebuilder</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="panel">
+        <h1>INJA Templatebuilder</h1>
+        <p>Interactive REST + SSE playground for INJA-like templates.</p>
+
+        <label for="example">Examples</label>
+        <select id="example"></select>
+
+        <label for="template">Template</label>
+        <textarea id="template" spellcheck="false"></textarea>
+
+        <label for="data">JSON Data</label>
+        <textarea id="data" spellcheck="false"></textarea>
+
+        <div class="actions">
+          <button id="renderBtn">Render</button>
+          <button id="validateBtn" class="secondary">Validate</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Output</h2>
+        <pre id="output"></pre>
+
+        <h2>SSE Event Stream</h2>
+        <ul id="events"></ul>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
