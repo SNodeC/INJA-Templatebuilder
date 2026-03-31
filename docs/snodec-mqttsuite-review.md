@@ -14,6 +14,8 @@ SNode.C and mqttsuite are a strong pairing for edge/industrial/event-driven syst
 
 SNode.C is a C++ network framework built around event-driven I/O and layered protocol abstractions. Its express-like high-level web API gives teams familiar routing semantics while retaining low-level performance characteristics.
 
+For this project specifically (INJA-Templatebuilder), SNode.C is a good fit because request-bound template rendering is CPU-bound but short-lived, and the framework lets you keep transport concerns explicit (headers, status codes, and JSON body contracts) without introducing a heavyweight runtime.
+
 ### 1.2 Why teams adopt it
 
 - **Performance envelope:** predictable CPU and memory behavior for high connection counts.
@@ -42,6 +44,14 @@ SNode.C is a C++ network framework built around event-driven I/O and layered pro
 - Enforce request/response schema contracts for all HTTP interfaces.
 - Put connection lifecycle and latency histograms on day-one dashboards.
 - Maintain compatibility matrix for OS, libc, OpenSSL, and SNode.C version.
+
+### 1.6 SNode.C code-level review checklist (applies directly to `main.cpp`)
+
+1. **Input parsing discipline:** keep strict distinction between missing keys, empty strings, and malformed JSON values.
+2. **Error-body consistency:** always return deterministic JSON error envelopes (`ok`, `error`, and optional `meta`) to simplify frontend behavior.
+3. **Backpressure awareness:** avoid long-running synchronous handlers; offload expensive transforms if templates or payloads become large.
+4. **Telemetry as contract:** include timing/size/error metadata in response bodies so clients can debug without out-of-band streams.
+5. **Header hygiene:** preserve explicit `Content-Type` and status codes on every branch.
 
 ---
 
@@ -98,6 +108,15 @@ mqttsuite-style architectures excel in decoupled event transport for telemetry i
 - Backpressure signaling from consumers to bridge layers.
 - Event correlation IDs spanning HTTP request to MQTT publication.
 
+### 3.4 Migration note for teams removing SSE
+
+If you remove SSE/WebSocket fan-out from a SNode.C service, compensate by making REST responses richer:
+
+- Include per-request telemetry in body `meta` blocks.
+- Add request IDs that can be propagated into MQTT topics/logs.
+- Keep a bounded recent-error store server-side only for diagnostics endpoints (if needed), not as a client push channel.
+- Preserve client-side event timelines by appending REST telemetry locally in the UI.
+
 ---
 
 ## 4) Security posture recommendations
@@ -129,4 +148,3 @@ mqttsuite-style architectures excel in decoupled event transport for telemetry i
 - Capacity model per topic class and environment.
 - Cost/perf optimization of hot topics and bridge routes.
 - Production readiness review with failure-injection evidence.
-

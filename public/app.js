@@ -58,23 +58,18 @@ document.querySelector('#renderBtn').addEventListener('click', async () => {
     pushEvent('render-local-ok', payload.meta);
   } else {
     outputEl.textContent = payload.error;
-    pushEvent('render-local-error', payload.meta);
+    pushEvent('render-local-error', payload.meta ?? { error: payload.error });
   }
 });
 
 document.querySelector('#validateBtn').addEventListener('click', async () => {
   const payload = await callApi('/api/validate');
 
-  if (payload.valid) {
+  if (payload.ok && payload.valid) {
     pushEvent('validate-ok', payload);
   } else {
     pushEvent('validate-error', payload);
   }
 });
-
-const stream = new EventSource('/api/events');
-stream.addEventListener('connected', (msg) => pushEvent('sse-connected', JSON.parse(msg.data)));
-stream.addEventListener('render-success', (msg) => pushEvent('sse-render-success', JSON.parse(msg.data)));
-stream.addEventListener('render-failure', (msg) => pushEvent('sse-render-failure', JSON.parse(msg.data)));
 
 loadExamples();

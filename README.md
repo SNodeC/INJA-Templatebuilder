@@ -5,22 +5,21 @@ Interactive INJA template builder with:
 - **Backend:** SNode.C `express`-style web API in C++
 - **Template engine:** INJA (C++)
 - **Frontend:** static HTML/CSS/JS playground
-- **Realtime feedback:** SSE endpoint for event updates
+- **Telemetry feedback:** render/validation metadata included in REST JSON responses
 
 ## Project layout
 
-- `backend/src/main.cpp` — REST + SSE backend using SNode.C
+- `backend/src/main.cpp` — REST backend using SNode.C
 - `public/` — frontend UI
 - `docs/snodec-mqttsuite-review.md` — extended review of SNode.C and mqttsuite
 - `CMakeLists.txt` — build definition
 
-## REST/SSE API
+## REST API
 
 - `GET /api/health`
 - `GET /api/examples`
 - `POST /api/validate`
 - `POST /api/render`
-- `GET /api/events` *(SSE stream frames)*
 
 ## Build (example)
 
@@ -35,4 +34,4 @@ Then open `http://localhost:3000`.
 ## Notes
 
 - Backend is now implemented in **SNode.C**, not Node.js.
-- SSE is used to deliver connection and render telemetry events to the frontend.
+- Telemetry is returned directly in JSON response bodies (`meta`) for render/validation requests.
