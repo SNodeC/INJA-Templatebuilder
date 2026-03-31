@@ -47,6 +47,7 @@ int main(int argc, char *argv[]) {
   express::WebApp::init(argc, argv);
 
   LegacyWebApp app;
+
   app.use(express::middleware::StaticMiddleware("./public"));
 
   app.get("/api/health", [] APPLICATION(req, res) {
@@ -149,6 +150,8 @@ int main(int argc, char *argv[]) {
     res->set("Connection", "keep-alive");
     res->send(stream.str());
   });
+
+  app.getConfig()->setReuseAddress();
 
   app.listen(3000, [](const LegacyWebApp::SocketAddress &socketAddress,
                       const core::socket::State &state) {

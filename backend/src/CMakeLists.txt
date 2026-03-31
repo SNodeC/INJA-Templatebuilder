@@ -11,5 +11,5 @@ add_executable(inja-templatebuilder main.cpp)
 
 target_link_libraries(
   inja-templatebuilder
-  PUBLIC http-server-express-tls-in http-server-express-legacy-in
-         nlohmann_json::nlohmann_json)
+  PUBLIC snodec::http-server-express-tls-in
+         snodec::http-server-express-legacy-in nlohmann_json::nlohmann_json)
