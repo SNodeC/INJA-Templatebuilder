@@ -4,11 +4,7 @@
 #include <nlohmann/json.hpp>
 
 #include <chrono>
-#include <ctime>
-#include <deque>
 #include <iostream>
-#include <mutex>
-#include <sstream>
 #include <string>
 
 namespace {
@@ -16,29 +12,18 @@ namespace {
 using json = nlohmann::json;
 using LegacyWebApp = express::legacy::in::WebApp;
 
-std::mutex eventMutex;
-std::deque<json> recentEvents;
-
-void pushEvent(const std::string &type, const json &payload) {
-  std::scoped_lock lock(eventMutex);
-  recentEvents.push_front({{"event", type}, {"payload", payload}});
-  if (recentEvents.size() > 100) {
-    recentEvents.pop_back();
-  }
-}
-
-std::string makeSseFrame(const std::string &eventName, const json &data) {
-  return "event: " + eventName + "\n" + "data: " + data.dump() + "\n\n";
-}
-
 json okJson(const json &payload = json::object()) {
   json result = payload;
   result["ok"] = true;
   return result;
 }
 
-json failJson(const std::string &error) {
-  return {{"ok", false}, {"error", error}};
+json failJson(const std::string &error, const json &meta = json::object()) {
+  json result = {{"ok", false}, {"error", error}};
+  if (!meta.empty()) {
+    result["meta"] = meta;
+  }
+  return result;
 }
 
 } // namespace
@@ -54,7 +39,7 @@ int main(int argc, char *argv[]) {
     res->type("application/json");
     res->send(okJson({{"service", "inja-templatebuilder"},
                       {"backend", "SNode.C express"},
-                      {"transport", "REST+SSE"}})
+                      {"transport", "REST"}})
                   .dump());
   });
 
@@ -85,12 +70,24 @@ int main(int argc, char *argv[]) {
       inja::Environment env;
       [[maybe_unused]] auto rendered = env.render(templateText, dataJson);
 
+      const json telemetry = {
+          {"ts", std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count()},
+          {"templateSize", templateText.size()},
+          {"dataType", dataJson.type_name()}};
+
       res->type("application/json");
-      res->send(okJson({{"valid", true}}).dump());
+      res->send(okJson({{"valid", true}, {"meta", telemetry}}).dump());
     } catch (const std::exception &ex) {
+      const json telemetry = {
+          {"ts", std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count()},
+          {"error", ex.what()}};
       res->status(400);
       res->type("application/json");
-      res->send(failJson(ex.what()).dump());
+      res->send(failJson(ex.what(), telemetry).dump());
     }
   });
 
@@ -114,8 +111,6 @@ int main(int argc, char *argv[]) {
           {"templateSize", templateText.size()},
           {"outputSize", output.size()}};
 
-      pushEvent("render-success", telemetry);
-
       res->type("application/json");
       res->send(okJson({{"output", output}, {"meta", telemetry}}).dump());
     } catch (const std::exception &ex) {
@@ -124,31 +119,11 @@ int main(int argc, char *argv[]) {
                      std::chrono::system_clock::now().time_since_epoch())
                      .count()},
           {"error", ex.what()}};
-      pushEvent("render-failure", telemetry);
 
       res->status(400);
       res->type("application/json");
-      res->send(failJson(ex.what()).dump());
+      res->send(failJson(ex.what(), telemetry).dump());
     }
-  });
-
-  // SSE endpoint: emits a connected frame plus buffered render events.
-  // Clients reconnect automatically, so this endpoint can stay lightweight.
-  app.get("/api/events", [] APPLICATION(req, res) {
-    std::ostringstream stream;
-    stream << makeSseFrame("connected", json{{"ts", std::time(nullptr)}});
-
-    {
-      std::scoped_lock lock(eventMutex);
-      for (const auto &event : recentEvents) {
-        stream << makeSseFrame(event.at("event"), event.at("payload"));
-      }
-    }
-
-    res->type("text/event-stream");
-    res->set("Cache-Control", "no-cache");
-    res->set("Connection", "keep-alive");
-    res->send(stream.str());
   });
 
   app.getConfig()->setReuseAddress();
